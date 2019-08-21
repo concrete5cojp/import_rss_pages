@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<concrete5-cif version="1.0">
+    <singlepages>
+        <page name="Import RSS Feed" path="/dashboard/pages/import_rss_pages"
+              filename="/dashboard/pages/import_rss_pages.php" pagetype="" description=""
+              package="import_rss_pages"/>
+    </singlepages>
+</concrete5-cif>

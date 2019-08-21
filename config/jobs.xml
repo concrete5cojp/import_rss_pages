@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<concrete5-cif version="1.0">
+    <jobs>
+        <job handle="import_rss_pages" package="import_rss_pages"/>
+    </jobs>
+</concrete5-cif>
