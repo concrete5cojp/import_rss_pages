@@ -1,0 +1,10 @@
+{
+  "name": "concrete5cojp/import_rss_pages",
+  "description": "A concrete5 package to import RSS feeds as pages.",
+  "type": "concrete5-package",
+  "license": "MIT",
+  "minimum-stability": "stable",
+  "require": {
+    "concrete5/core": "^8.5"
+  }
+}
