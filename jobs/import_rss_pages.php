@@ -43,7 +43,8 @@ class ImportRssPages extends QueueableJob
     public $jQueueBatchSize = 1;
 
     const EVENT_NAME_ON_BEFORE_LOAD = 'on_before_load_feed_to_import';
-    const EVENT_NAME_ON_AFTER_IMPORTED = 'on_after_page_created_from_feed';
+    const EVENT_NAME_ON_BEFORE_IMPORT = 'on_before_add_page_from_feed';
+    const EVENT_NAME_ON_AFTER_IMPORT = 'on_after_add_page_from_feed';
 
     /**
      * @var \Concrete\Core\Application\Application
@@ -192,16 +193,30 @@ class ImportRssPages extends QueueableJob
         /** @var EntryInterface|Entry $item */
         foreach ($feed as $item) {
             $handle = $this->textService->handle($item->getId());
+            $title = $item->getTitle();
+            $description = $item->getDescription();
+            if (!$description) {
+                $description = $item->getMediaDescription();
+            }
+            $thumbnail = $item->getMediaThumbnail();
+            if ($this->eventDispatcher->hasListeners(self::EVENT_NAME_ON_BEFORE_IMPORT)) {
+                $event = new GenericEvent();
+                $event->setArgument('handle', $handle);
+                $event->setArgument('title', $title);
+                $event->setArgument('description', $description);
+                $event->setArgument('thumbnail', $thumbnail);
+                $this->eventDispatcher->dispatch(self::EVENT_NAME_ON_BEFORE_IMPORT, $event);
+                $handle = $event->getArgument('handle');
+                $title = $event->getArgument('title');
+                $description = $event->getArgument('description');
+                $thumbnail = $event->getArgument('thumbnail');
+                unset($event);
+            }
+            
             $c = $this->getPageByHandle($handle);
             if (!is_object($c)) {
-                $title = $item->getTitle();
-                $description = $item->getDescription();
-                if (!$description) {
-                    $description = $item->getMediaDescription();
-                }
                 $dateCreated = $item->getDateCreated();
                 $link = $item->getLink();
-                $thumbnail = $item->getMediaThumbnail();
                 if (is_array($thumbnail) && isset($thumbnail['url']) && $thumbnail['url'] != '') {
                     $file = $this->getOrImportFile($thumbnail['url']);
                 }
@@ -221,11 +236,11 @@ class ImportRssPages extends QueueableJob
                     $c->setAttribute($aThumbnail, $file);
                 }
 
-                if ($this->eventDispatcher->hasListeners(self::EVENT_NAME_ON_AFTER_IMPORTED)) {
+                if ($this->eventDispatcher->hasListeners(self::EVENT_NAME_ON_AFTER_IMPORT)) {
                     $event = new GenericEvent();
                     $event->setArgument('page', $c);
                     $event->setArgument('item', $item);
-                    $this->eventDispatcher->dispatch(self::EVENT_NAME_ON_AFTER_IMPORTED, $event);
+                    $this->eventDispatcher->dispatch(self::EVENT_NAME_ON_AFTER_IMPORT, $event);
                     unset($event);
                 }
             }
