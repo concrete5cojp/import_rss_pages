@@ -198,38 +198,51 @@ class ImportRssPages extends QueueableJob
             if (!$description) {
                 $description = $item->getMediaDescription();
             }
-            $thumbnail = $item->getMediaThumbnail();
+            $thumbnail = '';
+            $mediaThumbnail = $item->getMediaThumbnail();
+            if ($mediaThumbnail !== null) {
+                $thumbnail = $mediaThumbnail['url'];
+            }
+            if ($thumbnail === '') {
+                $enclosure = $item->getEnclosure();
+                if ($enclosure !== null) {
+                    $thumbnail = $enclosure->url;
+                }
+            }
+            $link = $item->getLink();
             if ($this->eventDispatcher->hasListeners(self::EVENT_NAME_ON_BEFORE_IMPORT)) {
                 $event = new GenericEvent();
+                $event->setArgument('item', $item);
                 $event->setArgument('handle', $handle);
                 $event->setArgument('title', $title);
                 $event->setArgument('description', $description);
                 $event->setArgument('thumbnail', $thumbnail);
+                $event->setArgument('link', $link);
                 $this->eventDispatcher->dispatch(self::EVENT_NAME_ON_BEFORE_IMPORT, $event);
                 $handle = $event->getArgument('handle');
                 $title = $event->getArgument('title');
                 $description = $event->getArgument('description');
                 $thumbnail = $event->getArgument('thumbnail');
+                $link = $event->getArgument('link');
                 unset($event);
             }
             
             $c = $this->getPageByHandle($handle);
             if (!is_object($c)) {
                 $dateCreated = $item->getDateCreated();
-                $link = $item->getLink();
-                if (is_array($thumbnail) && isset($thumbnail['url']) && $thumbnail['url'] != '') {
-                    $file = $this->getOrImportFile($thumbnail['url']);
+                if ($thumbnail !== '') {
+                    $file = $this->getOrImportFile($thumbnail);
                 }
 
                 $data = [
-                    'cName' => $title,
+                    'cName' => trim($title),
                     'cHandle' => $handle,
-                    'cDescription' => $description,
+                    'cDescription' => strip_tags($description),
                     'cDatePublic' => $dateCreated->format(Date::DB_FORMAT),
                     'uID' => USER_SUPER_ID,
                 ];
                 $c = $pc->add($type, $data, $template);
-                if (is_object($aLink)) {
+                if (is_object($aLink) && $link !== '') {
                     $c->setAttribute($aLink, $link);
                 }
                 if (is_object($aThumbnail) && isset($file) && is_object($file)) {
